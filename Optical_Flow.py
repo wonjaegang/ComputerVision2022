@@ -2,61 +2,41 @@ import matplotlib as plt
 import numpy as np
 from PIL import Image
 
-img_name = 'CheckerBoard.jpg'
-img = Image.open(img_name)
+img_name_array = ['jaewon.jpg', 'jaewon.jpg']
+img_array = [np.array(Image.open(x)) for x in img_name_array]
 
-# Make grayscale pixel array
-pixel = np.array(img)
-gray_pix = np.full((img.size[1], img.size[0]), 0)
 
-for y in range(img.size[1]):
-    for x in range(img.size[0]):
-        gray_pix[y][x] = pixel[y][x].mean()
-    print("Gray scaling %d(height)" % y)
+def get_grayscale(img):
+    gray_pix = np.zeros((img.shape[0], img.shape[1]))
+    for y in range(img.shape[0]):
+        for x in range(img.shape[1]):
+            gray_pix[y][x] = img[y][x].mean()
+        print("Gray scaling %d(height)" % y)
+    corner_detect_result = Image.fromarray(gray_pix)
+    corner_detect_result.show()
+    return gray_pix
 
-# Make padding array
-pixel_padding = np.full((img.size[1] + 2, img.size[0] + 2), 0)
-pixel_padding[1:-1, 1:-1] = gray_pix
 
-# Calculate gradient & structure tensor
-H = np.full((img.size[1], img.size[0], 2, 2), 0)
-for y in range(img.size[1]):
-    for x in range(img.size[0]):
-        gradient = [pixel_padding[y + 1][x + 2] - pixel_padding[y + 1][x + 0],
-                    pixel_padding[y + 2][x + 1] - pixel_padding[y + 0][x + 1]]
-        H[y][x] = [[gradient[0] * gradient[0], gradient[0] * gradient[1]],
-                   [gradient[1] * gradient[0], gradient[1] * gradient[1]]]
-    print("Calculating structure tensor of %d(height)" % y)
+def add_padding(img):
+    pixel_padding = np.zeros((img.shape[0] + 2, img.shape[1] + 2))
+    pixel_padding[1:-1, 1:-1] = img
+    return pixel_padding
 
-# Calculate eigen Value of mean - H
-H_eigenValue = np.full((img.size[1] - 2, img.size[0] - 2, 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        H_mean = (H[y + 0][x + 0] + H[y + 0][x + 1] + H[y + 0][x + 2] +
-                  H[y + 1][x + 0] + H[y + 1][x + 1] + H[y + 1][x + 2] +
-                  H[y + 2][x + 0] + H[y + 2][x + 1] + H[y + 2][x + 2]) / 9
 
-        H_eigenValue[y][x] = np.linalg.eig(np.array(H_mean))[0]
-    print("Calculating eigen Value of %d(height)" % y)
+def get_derivative(img):
+    derivative = np.zeros((img.shape[0], img.shape[1], 2))
+    for y in range(1, img.shape[0] - 1):
+        for x in range(1, img.shape[1] - 1):
+            derivative[y][x] = [img[y + 1][x + 0] - img[y - 1][x + 0],
+                                img[y + 0][x + 1] - img[y + 0][x - 1]]
+        print("Calculating structure tensor of %d(height)" % y)
+    corner_detect_result = Image.fromarray(derivative[:, :, 0])
+    corner_detect_result.show()
+    corner_detect_result = Image.fromarray(derivative[:, :, 1])
+    corner_detect_result.show()
+    return derivative
 
-# Detect edge
-edge_result_pixel = np.full((img.size[1] - 2, img.size[0] - 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        if max(H_eigenValue[y][x]) > 1000:
-            edge_result_pixel[y][x] = 255
-    print("Detecting edge of %d(height)" % y)
 
-edge_detect_result = Image.fromarray(edge_result_pixel)
-edge_detect_result.show()
-
-# Detect corner
-corner_result_pixel = np.full((img.size[1] - 2, img.size[0] - 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        if min(H_eigenValue[y][x]) > 1000:
-            corner_result_pixel[y][x] = 255
-    print("Detecting corner of %d(height)" % y)
-
-corner_detect_result = Image.fromarray(corner_result_pixel)
-corner_detect_result.show()
+grayscale_image = get_grayscale(img_array[0])
+padding_image = add_padding(grayscale_image)
+derivative_image = get_derivative(padding_image)
