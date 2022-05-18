@@ -1,4 +1,5 @@
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from PIL import Image
 
@@ -35,11 +36,11 @@ def get_derivative(img):
     return derivative
 
 
-def window_slice(img, location, half_scale):
-    padding_img = add_padding(img, half_scale)
+def window_slice(img, location, neighbor_distance):
+    padding_img = add_padding(img, neighbor_distance)
 
-    window = padding_img[location[0]: location[0] + 2 * half_scale + 1,
-                         location[1]: location[1] + 2 * half_scale + 1]
+    window = padding_img[location[0]: location[0] + 2 * neighbor_distance + 1,
+                         location[1]: location[1] + 2 * neighbor_distance + 1]
     return window
 
 
@@ -47,6 +48,7 @@ def window_slice(img, location, half_scale):
 def least_squares_approximation(A, B):
     if np.linalg.det(A.T @ A):
         return np.linalg.inv(A.T @ A) @ A.T @ B
+    # dx = 0 or dy = 0 일때를 따로 고려하자.
     else:
         return np.array([[0], [0]])
 
@@ -56,30 +58,31 @@ def particle_swarm_approximation(A, B):
     return 0
 
 
-def optical_flow(img_array, window_scale=3):
-    half_scale = int((window_scale - 1) / 2)
+def optical_flow(img_array, neighbor_distance=1):
+    flow = np.zeros((len(img_array) - 1, img_array[0].shape[0], img_array[0].shape[1], 2))
 
     grayscale_image_next = get_grayscale(img_array[-1])
 
-    for image in img_array[-2::-1]:
+    for index, image in enumerate(img_array[-2::-1]):
         # Gray Scaling & Add Padding
         grayscale_image = get_grayscale(image)
         xy_derivative_image = get_derivative(grayscale_image)
         t_derivative_image = grayscale_image_next - grayscale_image
 
+        # For each pixel
         for y in range(grayscale_image.shape[0]):
             for x in range(grayscale_image.shape[1]):
                 # Window Slicing & Calculate Derivative
-                window_xy_derivative = window_slice(xy_derivative_image, [y, x], half_scale)
-                window_t_derivative = window_slice(t_derivative_image, [y, x], half_scale)
+                window_xy_derivative = window_slice(xy_derivative_image, [y, x], neighbor_distance)
+                window_t_derivative = window_slice(t_derivative_image, [y, x], neighbor_distance)
 
                 # Approximating for Optimized result
-                vector_dy_dx = window_xy_derivative.reshape(window_scale ** 2, 2)
-                vector_dt = window_t_derivative.reshape(window_scale ** 2, 1)
-                # print(vector_dy_dx)
-                # print(vector_dt)
-
+                vector_dy_dx = window_xy_derivative.reshape((2 * neighbor_distance + 1) ** 2, 2)
+                vector_dt = window_t_derivative.reshape((2 * neighbor_distance + 1) ** 2, 1)
                 optimized_v = least_squares_approximation(vector_dy_dx, -vector_dt)
+
+                # Save optimized (v, u) at flow matrix
+                flow[-index][y][x] = optimized_v.reshape(2)
                 print("location y: %d, x: %d optical flow:" % (y, x),
                       round(optimized_v[0][0], 2),
                       round(optimized_v[1][0], 2))
@@ -87,9 +90,29 @@ def optical_flow(img_array, window_scale=3):
         # Save current pixel values for next loop
         grayscale_image_next = grayscale_image
 
+    return flow
+
 
 if __name__ == '__main__':
+    # 추후에 downscale 은 따로 빼자
     img_name_array = ['jaewon.jpg', 'jaewon_after.jpg']
     image_array = [np.array(down_scale(Image.open(x), 4)) for x in img_name_array]
 
-    optical_flow(image_array, window_scale=3)
+    k = optical_flow(image_array, neighbor_distance=1)
+
+    plt.style.use('default')
+
+    fig, ax = plt.subplots()
+    plt.axis([0, k.shape[2], 0, k.shape[1]])
+
+    for y in range(k.shape[1]):
+        for x in range(k.shape[2]):
+            ax.add_patch(
+                patches.Arrow(
+                    x, k.shape[1] - 1 - y,
+                    k[0][y][x][1], -k[0][y][x][0],
+                    width=0.3,
+                    edgecolor='deeppink',
+                    facecolor='lightgray'
+                ))
+    plt.show()
