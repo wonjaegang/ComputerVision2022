@@ -2,8 +2,9 @@ import matplotlib as plt
 import numpy as np
 from PIL import Image
 
-img_name_array = ['jaewon.jpg', 'jaewon.jpg']
-img_array = [np.array(Image.open(x)) for x in img_name_array]
+
+def down_scale(img, r):
+    return img.resize((int(img.width / r), int(img.height / r)))
 
 
 def get_grayscale(img):
@@ -44,7 +45,10 @@ def window_slice(img, location, half_scale):
 
 # AX = B
 def least_squares_approximation(A, B):
-    return np.linalg.inv(A.T @ A) @ A.T @ B
+    if np.linalg.det(A.T @ A):
+        return np.linalg.inv(A.T @ A) @ A.T @ B
+    else:
+        return np.array([[0], [0]])
 
 
 # AX = B
@@ -52,8 +56,7 @@ def particle_swarm_approximation(A, B):
     return 0
 
 
-def main():
-    window_scale = 3
+def optical_flow(img_array, window_scale=3):
     half_scale = int((window_scale - 1) / 2)
 
     grayscale_image_next = get_grayscale(img_array[-1])
@@ -73,15 +76,20 @@ def main():
                 # Approximating for Optimized result
                 vector_dy_dx = window_xy_derivative.reshape(window_scale ** 2, 2)
                 vector_dt = window_t_derivative.reshape(window_scale ** 2, 1)
-                print(vector_dy_dx)
-                print(vector_dt)
+                # print(vector_dy_dx)
+                # print(vector_dt)
 
                 optimized_v = least_squares_approximation(vector_dy_dx, -vector_dt)
-                print("location y: %d, x: %d optical flow:" % (y, x), optimized_v[0][0], optimized_v[1][0])
+                print("location y: %d, x: %d optical flow:" % (y, x),
+                      round(optimized_v[0][0], 2),
+                      round(optimized_v[1][0], 2))
 
         # Save current pixel values for next loop
         grayscale_image_next = grayscale_image
 
 
 if __name__ == '__main__':
-    main()
+    img_name_array = ['jaewon.jpg', 'jaewon_after.jpg']
+    image_array = [np.array(down_scale(Image.open(x), 4)) for x in img_name_array]
+
+    optical_flow(image_array, window_scale=3)
