@@ -1,62 +1,70 @@
-import matplotlib as plt
 import numpy as np
 from PIL import Image
 
-img_name = 'CheckerBoard.jpg'
-img = Image.open(img_name)
 
-# Make grayscale pixel array
-pixel = np.array(img)
-gray_pix = np.full((img.size[1], img.size[0]), 0)
+def get_grayscale(img):
+    gray_img = np.zeros((img.shape[0], img.shape[1]))
+    for y in range(img.shape[0]):
+        for x in range(img.shape[1]):
+            gray_img[y][x] = img[y][x].mean()
+    return gray_img
 
-for y in range(img.size[1]):
-    for x in range(img.size[0]):
-        gray_pix[y][x] = pixel[y][x].mean()
-    print("Gray scaling %d(height)" % y)
 
-# Make padding array
-pixel_padding = np.full((img.size[1] + 2, img.size[0] + 2), 0)
-pixel_padding[1:-1, 1:-1] = gray_pix
+def add_padding(img, padding_size):
+    shape = list(img.shape)
+    shape[0] += padding_size * 2
+    shape[1] += padding_size * 2
+    pixel_padding = np.zeros(shape)
+    pixel_padding[padding_size:-padding_size, padding_size:-padding_size] = img
+    return pixel_padding
 
-# Calculate gradient & structure tensor
-H = np.full((img.size[1], img.size[0], 2, 2), 0)
-for y in range(img.size[1]):
-    for x in range(img.size[0]):
-        gradient = [pixel_padding[y + 1][x + 2] - pixel_padding[y + 1][x + 0],
-                    pixel_padding[y + 2][x + 1] - pixel_padding[y + 0][x + 1]]
-        H[y][x] = [[gradient[0] * gradient[0], gradient[0] * gradient[1]],
-                   [gradient[1] * gradient[0], gradient[1] * gradient[1]]]
-    print("Calculating structure tensor of %d(height)" % y)
 
-# Calculate eigen Value of mean - H
-H_eigenValue = np.full((img.size[1] - 2, img.size[0] - 2, 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        H_mean = (H[y + 0][x + 0] + H[y + 0][x + 1] + H[y + 0][x + 2] +
-                  H[y + 1][x + 0] + H[y + 1][x + 1] + H[y + 1][x + 2] +
-                  H[y + 2][x + 0] + H[y + 2][x + 1] + H[y + 2][x + 2]) / 9
+def get_derivative(img):
+    padding_img = add_padding(img, 1)
+    derivative = np.zeros((img.shape[0], img.shape[1], 2))
 
-        H_eigenValue[y][x] = np.linalg.eig(np.array(H_mean))[0]
-    print("Calculating eigen Value of %d(height)" % y)
+    for y in range(1, padding_img.shape[0] - 1):
+        for x in range(1, padding_img.shape[1] - 1):
+            derivative[y - 1][x - 1] = [padding_img[y + 1][x + 0] - padding_img[y - 1][x + 0],
+                                        padding_img[y + 0][x + 1] - padding_img[y + 0][x - 1]]
+    return derivative
 
-# Detect edge
-edge_result_pixel = np.full((img.size[1] - 2, img.size[0] - 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        if max(H_eigenValue[y][x]) > 1000:
-            edge_result_pixel[y][x] = 255
-    print("Detecting edge of %d(height)" % y)
 
-edge_detect_result = Image.fromarray(edge_result_pixel)
-edge_detect_result.show()
+def window_slice(img, location, neighbor_distance):
+    padding_img = add_padding(img, neighbor_distance)
 
-# Detect corner
-corner_result_pixel = np.full((img.size[1] - 2, img.size[0] - 2), 0)
-for y in range(img.size[1] - 2):
-    for x in range(img.size[0] - 2):
-        if min(H_eigenValue[y][x]) > 1000:
-            corner_result_pixel[y][x] = 255
-    print("Detecting corner of %d(height)" % y)
+    window = padding_img[location[0]: location[0] + 2 * neighbor_distance + 1,
+                         location[1]: location[1] + 2 * neighbor_distance + 1]
+    return window
 
-corner_detect_result = Image.fromarray(corner_result_pixel)
-corner_detect_result.show()
+
+def corner_Harris(img, neighbor_distance=1, threshold=1000):
+    corner_location = []
+
+    grayscale_image = get_grayscale(img)
+    yx_derivative_image = get_derivative(grayscale_image)
+
+    for y in range(grayscale_image.shape[0]):
+        for x in range(grayscale_image.shape[1]):
+            window_yx_derivative = window_slice(yx_derivative_image, [y, x], neighbor_distance)
+            vector_dy_dx = window_yx_derivative.reshape((2 * neighbor_distance + 1) ** 2, 2)
+            structure_tensor = sum([np.array([[ix * ix, ix * iy],
+                                              [iy * ix, iy * iy]]) for iy, ix in vector_dy_dx])
+
+            if min(np.linalg.eigvals(structure_tensor)) > threshold:
+                corner_location.append([y, x])
+
+    return corner_location
+
+
+if __name__ == '__main__':
+    img_name = 'squares.jpg'
+    image = np.array(Image.open(img_name))
+
+    corner_result = corner_Harris(image, neighbor_distance=1, threshold=1000)
+    corner_image = np.zeros((image.shape[0], image.shape[1]))
+
+    for corner_y, corner_x in corner_result:
+        corner_image[corner_y][corner_x] = 255
+
+    Image.fromarray(corner_image).show()
