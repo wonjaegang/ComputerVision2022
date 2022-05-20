@@ -58,6 +58,25 @@ def particle_swarm_approximation(A, B):
     return 0
 
 
+def corner_Harris(img, neighbor_distance=1, threshold=1000):
+    corner_location = []
+
+    grayscale_image = get_grayscale(img)
+    yx_derivative_image = get_derivative(grayscale_image)
+
+    for y in range(grayscale_image.shape[0]):
+        for x in range(grayscale_image.shape[1]):
+            window_yx_derivative = window_slice(yx_derivative_image, [y, x], neighbor_distance)
+            vector_dy_dx = window_yx_derivative.reshape((2 * neighbor_distance + 1) ** 2, 2)
+            structure_tensor = sum([np.array([[ix * ix, ix * iy],
+                                              [iy * ix, iy * iy]]) for iy, ix in vector_dy_dx])
+
+            if min(np.linalg.eigvals(structure_tensor)) > threshold:
+                corner_location.append([y, x])
+
+    return corner_location
+
+
 def optical_flow(img_array, neighbor_distance=1):
     flow = np.zeros((len(img_array) - 1, img_array[0].shape[0], img_array[0].shape[1], 2))
 
@@ -66,18 +85,20 @@ def optical_flow(img_array, neighbor_distance=1):
     for index, image in enumerate(img_array[-2::-1]):
         # Gray Scaling & Add Padding
         grayscale_image = get_grayscale(image)
-        xy_derivative_image = get_derivative(grayscale_image)
+        yx_derivative_image = get_derivative(grayscale_image)
         t_derivative_image = grayscale_image_next - grayscale_image
 
         # For each pixel
+        # corner = corner_Harris(grayscale_image, threshold=1000)
+        # for y, x in corner:
         for y in range(grayscale_image.shape[0]):
             for x in range(grayscale_image.shape[1]):
                 # Window Slicing & Calculate Derivative
-                window_xy_derivative = window_slice(xy_derivative_image, [y, x], neighbor_distance)
+                window_yx_derivative = window_slice(yx_derivative_image, [y, x], neighbor_distance)
                 window_t_derivative = window_slice(t_derivative_image, [y, x], neighbor_distance)
 
                 # Approximating for Optimized result
-                vector_dy_dx = window_xy_derivative.reshape((2 * neighbor_distance + 1) ** 2, 2)
+                vector_dy_dx = window_yx_derivative.reshape((2 * neighbor_distance + 1) ** 2, 2)
                 vector_dt = window_t_derivative.reshape((2 * neighbor_distance + 1) ** 2, 1)
                 optimized_v = least_squares_approximation(vector_dy_dx, -vector_dt)
 
@@ -93,26 +114,29 @@ def optical_flow(img_array, neighbor_distance=1):
     return flow
 
 
+def display_flow(flow):
+    plt.style.use('default')
+    fig, ax = plt.subplots()
+    plt.axis([0, flow.shape[1], 0, flow.shape[0]])
+    for y in range(flow.shape[0]):
+        for x in range(flow.shape[1]):
+            # if np.linalg.norm(flow[y][x], ord=2):
+            ax.add_patch(
+                patches.Arrow(
+                    x, flow.shape[0] - 1 - y,
+                    flow[y][x][1], -flow[y][x][0],
+                    width=0.3,
+                    edgecolor='deeppink',
+                    facecolor='white'
+                ))
+    plt.show()
+    return 0
+
+
 if __name__ == '__main__':
     # 추후에 downscale 은 따로 빼자
     img_name_array = ['jaewon.jpg', 'jaewon_after.jpg']
     image_array = [np.array(down_scale(Image.open(x), 4)) for x in img_name_array]
 
-    k = optical_flow(image_array, neighbor_distance=1)
-
-    plt.style.use('default')
-
-    fig, ax = plt.subplots()
-    plt.axis([0, k.shape[2], 0, k.shape[1]])
-
-    for y in range(k.shape[1]):
-        for x in range(k.shape[2]):
-            ax.add_patch(
-                patches.Arrow(
-                    x, k.shape[1] - 1 - y,
-                    k[0][y][x][1], -k[0][y][x][0],
-                    width=0.3,
-                    edgecolor='deeppink',
-                    facecolor='lightgray'
-                ))
-    plt.show()
+    flow_array = optical_flow(image_array, neighbor_distance=1)
+    display_flow(flow_array[0])
