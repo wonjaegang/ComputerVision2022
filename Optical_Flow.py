@@ -53,7 +53,7 @@ def least_squares_approximation(A, B):
         return np.array([[0], [0]])
 
 
-def corner_Harris(img, neighbor_distance=1, threshold=1000):
+def corner_Harris(img, neighbor_distance, threshold):
     corner_location = []
 
     grayscale_image = get_grayscale(img)
@@ -72,8 +72,8 @@ def corner_Harris(img, neighbor_distance=1, threshold=1000):
     return corner_location
 
 
-def optical_flow(img_array, neighbor_distance):
-    flow = np.zeros((len(img_array) - 1, img_array[0].shape[0], img_array[0].shape[1], 2))
+def optical_flow(img_array, neighbor_distance, corner_setting):
+    flow = np.full((len(img_array) - 1, img_array[0].shape[0], img_array[0].shape[1], 2), None)
 
     grayscale_image_next = get_grayscale(img_array[-1])
 
@@ -86,7 +86,9 @@ def optical_flow(img_array, neighbor_distance):
         # # For each pixel
         # for y in range(grayscale_image.shape[0]):
         #     for x in range(grayscale_image.shape[1]):
-        corner = corner_Harris(grayscale_image, threshold=10000)
+
+        # For each corner
+        corner = corner_Harris(grayscale_image, *corner_setting)
         for y, x in corner:
             # Window Slicing & Calculate Derivative
             window_yx_derivative = window_slice(yx_derivative_image, [y, x], neighbor_distance)
@@ -99,9 +101,6 @@ def optical_flow(img_array, neighbor_distance):
 
             # Save optimized (v, u) at flow matrix
             flow[-index][y][x] = optimized_v.reshape(2)
-            # print("location y: %d, x: %d optical flow:" % (y, x),
-            #       round(optimized_v[0][0], 2),
-            #       round(optimized_v[1][0], 2))
 
         # Save current pixel values for next loop
         grayscale_image_next = grayscale_image
@@ -117,7 +116,7 @@ def display_flow(flow_array):
     for index in range(flow_array.shape[0]):
         for y in range(flow_array.shape[1]):
             for x in range(flow_array.shape[2]):
-                if np.linalg.norm(flow_array[index][y][x], ord=2):
+                if flow_array[index][y][x][0] is not None:
                     ax.add_patch(
                         patches.Arrow(
                             x, flow_array.shape[1] - 1 - y,
@@ -130,19 +129,29 @@ def display_flow(flow_array):
     return 0
 
 
+def get_image_name(video_name, frame):
+    return ['%s/%dFrame/%s %03d.jpg' % (video_name, frame, video_name, x + 1) for x in range(frame)]
+
+
+def get_image_array(downscale, img_name_array):
+    return [np.array(down_scale(Image.open(x), downscale)) for x in img_name_array]
+
+
 def main():
-    # 설정값들은 다 빼두자.
-    # 추후에 downscale 은 따로 빼자
-    video_name = 'Racing'
-    frame = 75
+    # 사용자 설정 값
+    video_name = 'Paris'
+    frame = 100
     downscale = 4
     neighbor_distance = 1
+    corner_neighbor_distance = 1
+    corner_threshold = 5000
+    corner_setting = [corner_neighbor_distance, corner_threshold]
 
-    img_name_array = ['%s/%dFrame/%s %02d.jpg' % (video_name, frame, video_name, x + 1) for x in range(frame)]
-    # img_name_array = ['Racing/600Frame/Racing 022.jpg', 'Racing/600Frame/Racing 023.jpg']
-    image_array = [np.array(down_scale(Image.open(x), downscale)) for x in img_name_array]
+    img_name_array = ['Paris/200Frame/Paris 180.jpg', 'Paris/200Frame/Paris 181.jpg']
+    # img_name_array = get_image_name(video_name, frame)
+    image_array = get_image_array(downscale, img_name_array)
 
-    flow_array = optical_flow(image_array, neighbor_distance)
+    flow_array = optical_flow(image_array, neighbor_distance, corner_setting)
     display_flow(flow_array)
 
 
