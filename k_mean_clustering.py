@@ -35,8 +35,8 @@ class KMeanClustering:
             # Update the location of clusters
             for index in range(k):
                 if clustered_point[index]:
-                    new_location = np.array([np.mean(np.array(clustered_point[index])[:, 0]),
-                                             np.mean(np.array(clustered_point[index])[:, 1])])
+                    new_location = np.array([np.mean(np.array(clustered_point[index])[:, i])
+                                             for i, _ in enumerate(data_range)])
                 else:
                     new_location = np.array([random.uniform(*min_max) for min_max in data_range])
                 error = np.linalg.norm(new_location - cluster_location[index]) / np.linalg.norm(new_location)
@@ -52,6 +52,9 @@ class KMeanClustering:
                                   for point in final_clustered_point[i]]) for i, cluster in
                              enumerate(cluster_location)])
 
+        self.clustered_points[k] = final_clustered_point
+        self.cluster_location[k] = cluster_location
+        self.inertia_value[k] = inertia_value
         return final_clustered_point, cluster_location, inertia_value
 
     def repeat_K_mean_clustering(self, k):
@@ -64,39 +67,42 @@ class KMeanClustering:
                 clustered_points = clustering_result[0]
                 cluster_location = clustering_result[1]
                 inertia_value = clustering_result[2]
+
+        self.clustered_points[k] = clustered_points
+        self.cluster_location[k] = cluster_location
+        self.inertia_value[k] = inertia_value
         return clustered_points, cluster_location, inertia_value
 
     def find_elbow_k(self):
         inertia_value_list = list(self.inertia_value.values())
         d_inertia_value = [x2 - x1 for x1, x2 in zip(inertia_value_list[:-1], inertia_value_list[1:])]
-        elbow_gradient = (d_inertia_value[0] + d_inertia_value[-1]) / 2
+        elbow_gradient = (inertia_value_list[-1] - inertia_value_list[0]) / self.k_max
         for i, gradient in enumerate(d_inertia_value):
             if gradient > elbow_gradient:
-                return (i + 1) + 1
+                return i + 1
 
-    def plot_clustered_result(self):
-        plt.figure()
-        plt.plot(self.inertia_value.keys(), self.inertia_value.values(), 'r-o')
-        plt.plot(self.elbow_k, self.inertia_value[self.elbow_k], 'b-o')
+    def plot_clustered_result(self, k, inertia_value_plot=True):
+        if inertia_value_plot:
+            plt.figure()
+            plt.plot(self.inertia_value.keys(), self.inertia_value.values(), 'r-o')
+            plt.plot(self.elbow_k, self.inertia_value[self.elbow_k], 'b-o')
 
         plt.figure()
-        for i, points in enumerate(self.clustered_points[self.elbow_k]):
-            plt.scatter(*np.array(points).T,
-                        color=(1 / self.elbow_k * i, 1 - 1 / self.elbow_k * i, 1 / self.elbow_k * i))
-        plt.scatter(*self.cluster_location[self.elbow_k].T, color='r')
+        for i, points in enumerate(self.clustered_points[k]):
+            plt.scatter(*np.array(points).T[:2, :],
+                        color=(1 / k * i, 1 - 1 / k * i, 1 / k * i))
+        plt.scatter(*self.cluster_location[k].T[:2, :], color='r')
         plt.show()
 
     def k_mean_clustering(self, plot=True):
-        for k in range(1, self.k_max):
-            clustering_result = self.repeat_K_mean_clustering(k)
-            self.clustered_points[k] = clustering_result[0]
-            self.cluster_location[k] = clustering_result[1]
-            self.inertia_value[k] = clustering_result[2]
+        for k in range(1, self.k_max + 1):
+            self.repeat_K_mean_clustering(k)
+            print("Clustering Data - (%d/%d)k" % (k, self.k_max))
 
         self.elbow_k = self.find_elbow_k()
 
         if plot:
-            self.plot_clustered_result()
+            self.plot_clustered_result(self.elbow_k)
 
         return self.clustered_points[self.elbow_k]
 
