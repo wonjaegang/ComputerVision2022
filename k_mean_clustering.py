@@ -90,9 +90,9 @@ class KMeanClustering:
         plt.figure()
         for i, points in enumerate(self.clustered_points[k]):
             plt.scatter(*np.array(points).T[:2, :],
-                        color=(1 / k * i, 1 - 1 / k * i, 1 / k * i))
-        plt.scatter(*self.cluster_location[k].T[:2, :], color='r')
-        plt.show()
+                        color=(1 / k * i, 1 - 1 / k * i, 1 / k * i),
+                        s=10)
+        plt.scatter(*self.cluster_location[k].T[:2, :], color='r', s=10)
 
     def k_mean_clustering(self, plot=True):
         for k in range(1, self.k_max + 1):
@@ -199,6 +199,7 @@ def main():
 
     k_mean_clustering = KMeanClustering(data, error_threshold=0.001, k_max=10, repetition=10)
     k_mean_clustering.k_mean_clustering(plot=True)
+    plt.show()
 
 
 if __name__ == '__main__':

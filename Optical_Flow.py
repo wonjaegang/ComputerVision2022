@@ -66,7 +66,6 @@ class OpticalFlow:
                                 edgecolor='deeppink',
                                 facecolor='white'
                             ))
-        plt.show()
         return 0
 
 
@@ -84,6 +83,7 @@ def main():
                                corner_threshold=5000)
     optical_flow.calculate_optical_flow()
     optical_flow.display_flow()
+    plt.show()
 
 
 if __name__ == '__main__':
