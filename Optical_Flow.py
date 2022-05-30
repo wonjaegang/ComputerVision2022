@@ -4,10 +4,9 @@ from image_functions import *
 
 
 class OpticalFlow:
-    def __init__(self, img_array,
-                 downscale=4, neighbor_distance=1,
+    def __init__(self, img_array, neighbor_distance=1,
                  corner_neighbor_distance=1, corner_threshold=5000):
-        self.image_array = list(map(lambda x: np.array(down_scale(x, downscale)), img_array))
+        self.image_array = img_array
         self.neighbor_distance = neighbor_distance
         self.corner_neighbor_distance = corner_neighbor_distance
         self.corner_threshold = corner_threshold
@@ -60,8 +59,8 @@ class OpticalFlow:
                     if self.flow[frame_num][y][x][0] is not None:
                         ax.add_patch(
                             patches.Arrow(
-                                x, self.flow.shape[1] - 1 - y,
-                                self.flow[frame_num][y][x][1], -self.flow[frame_num][y][x][0],
+                                x, y,
+                                self.flow[frame_num][y][x][1], self.flow[frame_num][y][x][0],
                                 width=0.3,
                                 edgecolor='deeppink',
                                 facecolor='white'
@@ -74,15 +73,16 @@ def main():
     frame = 100
     # img_name_array = get_image_name_from_video(video_name, frame)
     img_name_array = ['Paris/200Frame/Paris 180.jpg', 'Paris/200Frame/Paris 181.jpg']
-    image_array = get_image_array(img_name_array)
+    image_array = get_image_array(img_name_array, downscale=4)
 
     optical_flow = OpticalFlow(image_array,
-                               downscale=4,
                                neighbor_distance=1,
                                corner_neighbor_distance=1,
                                corner_threshold=5000)
     optical_flow.calculate_optical_flow()
     optical_flow.display_flow()
+    plt.imshow(get_grayscale(image_array[0]), cmap='gray', origin='upper')
+    plt.gca().invert_yaxis()
     plt.show()
 
 

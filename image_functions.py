@@ -73,5 +73,5 @@ def get_image_name_from_video(video_name, frame):
     return ['%s/%dFrame/%s %03d.jpg' % (video_name, frame, video_name, x + 1) for x in range(frame)]
 
 
-def get_image_array(img_name_array):
-    return [Image.open(x) for x in img_name_array]
+def get_image_array(img_name_array, downscale=1):
+    return [np.array(down_scale(Image.open(x), 4)) for x in img_name_array]
