@@ -6,6 +6,9 @@ import random
 class KMeanClustering:
     def __init__(self, data, error_threshold=0.01, k_max=10, repetition=10):
         self.data = data
+        self.data_dimension = data.shape[1]
+        self.data_range = [[min(self.data[:, i]), max(self.data[:, i])] for i in range(self.data_dimension)]
+
         self.error_threshold = error_threshold
         self.k_max = k_max
         self.repetition = repetition
@@ -15,12 +18,15 @@ class KMeanClustering:
         self.inertia_value = {}
         self.elbow_k = None
 
+    def normalized_norm(self, vector):
+        normalized_vector = [x / (self.data_range[i][1] - self.data_range[i][0]) for i, x in enumerate(vector)]
+        return np.linalg.norm(normalized_vector, ord=2)
+
     def k_mean_clustering_once(self, k):
         def average(mean_before, n, a_n1):
             return (mean_before * n + a_n1) / (n + 1)
 
-        data_range = [[min(self.data[:, i]), max(self.data[:, i])] for i in range(self.data.shape[1])]
-        cluster_location = np.array([[random.uniform(*min_max) for min_max in data_range] for _ in range(k)])
+        cluster_location = np.array([[random.uniform(*min_max) for min_max in self.data_range] for _ in range(k)])
 
         while True:
             clustered_point = [[] for _ in range(k)]
@@ -28,7 +34,7 @@ class KMeanClustering:
 
             # Divide the points into clusters
             for point in self.data:
-                norm_array = [[np.linalg.norm(point - cluster, ord=2), i] for i, cluster in enumerate(cluster_location)]
+                norm_array = [[self.normalized_norm(point - cluster), i] for i, cluster in enumerate(cluster_location)]
                 nearest_cluster = sorted(norm_array, key=lambda x: x[0])[0][1]
                 clustered_point[nearest_cluster].append(point)
 
@@ -36,9 +42,9 @@ class KMeanClustering:
             for index in range(k):
                 if clustered_point[index]:
                     new_location = np.array([np.mean(np.array(clustered_point[index])[:, i])
-                                             for i, _ in enumerate(data_range)])
+                                             for i in range(self.data_dimension)])
                 else:
-                    new_location = np.array([random.uniform(*min_max) for min_max in data_range])
+                    new_location = np.array([random.uniform(*min_max) for min_max in self.data_range])
                 error = np.linalg.norm(new_location - cluster_location[index]) / np.linalg.norm(new_location)
                 mean_error = average(mean_error, index, error)
                 cluster_location[index] = new_location
