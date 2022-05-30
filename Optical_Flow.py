@@ -11,8 +11,7 @@ class OpticalFlow:
         self.corner_neighbor_distance = corner_neighbor_distance
         self.corner_threshold = corner_threshold
 
-        self.flow = np.full((len(self.image_array) - 1, self.image_array[0].shape[0], self.image_array[0].shape[1], 2),
-                            None)
+        self.flow = np.zeros((len(self.image_array) - 1, self.image_array[0].shape[0], self.image_array[0].shape[1], 2))
 
     def calculate_optical_flow(self):
         grayscale_image_next = get_grayscale(self.image_array[-1])
@@ -56,15 +55,14 @@ class OpticalFlow:
         for frame_num in range(self.flow.shape[0]):
             for y in range(self.flow.shape[1]):
                 for x in range(self.flow.shape[2]):
-                    if self.flow[frame_num][y][x][0] is not None:
-                        ax.add_patch(
-                            patches.Arrow(
-                                x, y,
-                                self.flow[frame_num][y][x][1], self.flow[frame_num][y][x][0],
-                                width=0.3,
-                                edgecolor='deeppink',
-                                facecolor='white'
-                            ))
+                    ax.add_patch(
+                        patches.Arrow(
+                            x, y,
+                            self.flow[frame_num][y][x][1], self.flow[frame_num][y][x][0],
+                            width=0.3,
+                            edgecolor='deeppink',
+                            facecolor='white'
+                        ))
         plt.gca().invert_yaxis()
         plt.imshow(self.image_array[0])
         return 0
@@ -80,7 +78,7 @@ def main():
     optical_flow = OpticalFlow(image_array,
                                neighbor_distance=1,
                                corner_neighbor_distance=1,
-                               corner_threshold=5000)
+                               corner_threshold=1000)
     optical_flow.calculate_optical_flow()
     optical_flow.display_flow()
     plt.show()
