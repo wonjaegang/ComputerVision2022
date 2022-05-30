@@ -7,77 +7,84 @@ class KMeanClustering:
     def __init__(self, data, error_threshold=0.01, k_max=10, repetition=10):
         self.data = data
         self.data_dimension = data.shape[1]
-        self.data_range = [[min(self.data[:, i]), max(self.data[:, i])] for i in range(self.data_dimension)]
+        self.data_range = self.get_data_range()
+        self.normalized_data = self.data_normalization()
 
         self.error_threshold = error_threshold
         self.k_max = k_max
         self.repetition = repetition
 
-        self.clustered_points = {}
+        self.clustered_point_index = {}
         self.cluster_location = {}
         self.inertia_value = {}
         self.elbow_k = None
 
-    def normalized_norm(self, vector):
-        normalized_vector = [x / (self.data_range[i][1] - self.data_range[i][0]) for i, x in enumerate(vector)]
-        return np.linalg.norm(normalized_vector, ord=2)
+    def get_data_range(self):
+        return [[min(self.data[:, i]), max(self.data[:, i])] for i in range(self.data_dimension)]
+
+    def data_normalization(self):
+        normalized_data = [(x - self.data_range[i][0]) / (self.data_range[i][1] - self.data_range[i][0])
+                           for i, x in enumerate(self.data.T)]
+        return np.array(normalized_data).T
 
     def k_mean_clustering_once(self, k):
         def average(mean_before, n, a_n1):
             return (mean_before * n + a_n1) / (n + 1)
 
-        cluster_location = np.array([[random.uniform(*min_max) for min_max in self.data_range] for _ in range(k)])
+        cluster_location = np.array([[random.random() for _ in range(self.data_dimension)] for _ in range(k)])
 
         while True:
-            clustered_point = [[] for _ in range(k)]
+            clustered_point_index = [[] for _ in range(k)]
             mean_error = 0
 
             # Divide the points into clusters
-            for point in self.data:
-                norm_array = [[self.normalized_norm(point - cluster), i] for i, cluster in enumerate(cluster_location)]
-                nearest_cluster = sorted(norm_array, key=lambda x: x[0])[0][1]
-                clustered_point[nearest_cluster].append(point)
+            for index, point in enumerate(self.normalized_data):
+                norm_array = [[np.linalg.norm(point - cluster, ord=2), i] for i, cluster in enumerate(cluster_location)]
+                nearest_cluster_index = min(norm_array, key=lambda x: x[0])[1]
+                clustered_point_index[nearest_cluster_index].append(index)
 
             # Update the location of clusters
             for index in range(k):
-                if clustered_point[index]:
-                    new_location = np.array([np.mean(np.array(clustered_point[index])[:, i])
-                                             for i in range(self.data_dimension)])
+                if clustered_point_index[index]:
+                    clustered_point = np.array([self.normalized_data[point_i]
+                                                for point_i in clustered_point_index[index]])
+                    new_location = np.array([np.mean(vector) for vector in clustered_point.T]).T
+
                 else:
-                    new_location = np.array([random.uniform(*min_max) for min_max in self.data_range])
+                    new_location = np.array([random.random() for _ in range(self.data_dimension)])
                 error = np.linalg.norm(new_location - cluster_location[index]) / np.linalg.norm(new_location)
                 mean_error = average(mean_error, index, error)
                 cluster_location[index] = new_location
 
             # Evaluate the location of clusters
             if mean_error < self.error_threshold:
-                final_clustered_point = clustered_point
+                final_clustered_point_index = clustered_point_index
                 break
 
-        inertia_value = sum([sum([np.linalg.norm(point - cluster, ord=2)
-                                  for point in final_clustered_point[i]]) for i, cluster in
+        inertia_value = sum([sum([np.linalg.norm(self.normalized_data[point_i] - cluster, ord=2)
+                                  for point_i in final_clustered_point_index[i]]) for i, cluster in
                              enumerate(cluster_location)])
 
-        self.clustered_points[k] = final_clustered_point
+        self.clustered_point_index[k] = final_clustered_point_index
         self.cluster_location[k] = cluster_location
         self.inertia_value[k] = inertia_value
-        return final_clustered_point, cluster_location, inertia_value
+        return final_clustered_point_index, cluster_location, inertia_value
 
     def repeat_K_mean_clustering(self, k):
-        clustered_points = None
+        clustered_point_index = None
         cluster_location = None
         inertia_value = float('inf')
         for _ in range(self.repetition):
             clustering_result = self.k_mean_clustering_once(k)
             if clustering_result[2] < inertia_value:
-                clustered_points = clustering_result[0]
+                clustered_point_index = clustering_result[0]
                 cluster_location = clustering_result[1]
                 inertia_value = clustering_result[2]
 
-        self.clustered_points[k] = clustered_points
+        self.clustered_point_index[k] = clustered_point_index
         self.cluster_location[k] = cluster_location
         self.inertia_value[k] = inertia_value
-        return clustered_points, cluster_location, inertia_value
+        return clustered_point_index, cluster_location, inertia_value
 
     def find_elbow_k(self):
         inertia_value_list = list(self.inertia_value.values())
@@ -94,11 +101,11 @@ class KMeanClustering:
             plt.plot(self.elbow_k, self.inertia_value[self.elbow_k], 'b-o')
 
         plt.figure()
-        for i, points in enumerate(self.clustered_points[k]):
+        for cluster_i, clustered_point_index in enumerate(self.clustered_point_index[k]):
+            points = np.array([self.data[point_i] for point_i in clustered_point_index])
             plt.scatter(*np.array(points).T[:2, :],
-                        color=(1 / k * i, 1 - 1 / k * i, 1 / k * i),
+                        color=(1 / k * cluster_i, 1 - 1 / k * cluster_i, 1 / k * cluster_i),
                         s=10)
-        plt.scatter(*self.cluster_location[k].T[:2, :], color='r', s=10)
         plt.gca().invert_yaxis()
 
     def k_mean_clustering(self, plot=True):
@@ -111,7 +118,7 @@ class KMeanClustering:
         if plot:
             self.plot_clustered_result(self.elbow_k)
 
-        return self.clustered_points[self.elbow_k]
+        return self.clustered_point_index[self.elbow_k]
 
 
 def main():
@@ -151,47 +158,6 @@ def main():
                      [20, 19],
                      [30, 19],
                      [14, 19],
-                     [5, 9],
-                     [1, 19],
-                     [5, 5],
-                     [5, 6],
-                     [6, 5],
-                     [6, 6],
-                     [7, 7],
-                     [5, 7],
-                     [7, 5],
-                     [7, 6],
-                     [6, 7],
-                     [30, 19],
-                     [14, 19],
-                     [5, 9],
-                     [1, 19],
-                     [18, 17],
-                     [20, 8],
-                     [25, 6],
-                     [17, 5],
-                     [17, 17],
-                     [10, 4],
-                     [30, 2],
-                     [29, 4],
-                     [30, 3],
-                     [16, 1],
-                     [28, 2],
-                     [17, 14],
-                     [28, 3],
-                     [29, 30],
-                     [10, 18],
-                     [10, 21],
-                     [11, 28],
-                     [29, 21],
-                     [30, 4],
-                     [19, 11],
-                     [28, 21],
-                     [28, 11],
-                     [28, 30],
-                     [29, 30],
-                     [30, 28],
-                     [10, 28],
                      [11, 28],
                      [29, 2],
                      [30, 3],
@@ -204,7 +170,7 @@ def main():
                      [4, 1],
                      [4, 4]])
 
-    k_mean_clustering = KMeanClustering(data, error_threshold=0.001, k_max=10, repetition=10)
+    k_mean_clustering = KMeanClustering(data, error_threshold=0.01, k_max=10, repetition=10)
     k_mean_clustering.k_mean_clustering(plot=True)
     plt.show()
 
