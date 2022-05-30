@@ -93,6 +93,7 @@ class KMeanClustering:
                         color=(1 / k * i, 1 - 1 / k * i, 1 / k * i),
                         s=10)
         plt.scatter(*self.cluster_location[k].T[:2, :], color='r', s=10)
+        plt.gca().invert_yaxis()
 
     def k_mean_clustering(self, plot=True):
         for k in range(1, self.k_max + 1):

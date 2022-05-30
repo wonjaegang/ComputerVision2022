@@ -65,6 +65,8 @@ class OpticalFlow:
                                 edgecolor='deeppink',
                                 facecolor='white'
                             ))
+        plt.gca().invert_yaxis()
+        plt.imshow(self.image_array[0])
         return 0
 
 
@@ -81,8 +83,6 @@ def main():
                                corner_threshold=5000)
     optical_flow.calculate_optical_flow()
     optical_flow.display_flow()
-    plt.imshow(get_grayscale(image_array[0]), cmap='gray', origin='upper')
-    plt.gca().invert_yaxis()
     plt.show()
 
 
