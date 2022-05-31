@@ -74,4 +74,4 @@ def get_image_name_from_video(video_name, frame):
 
 
 def get_image_array(img_name_array, downscale=1):
-    return [np.array(down_scale(Image.open(x), 4)) for x in img_name_array]
+    return [np.array(down_scale(Image.open(x), downscale)) for x in img_name_array]
