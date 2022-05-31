@@ -41,7 +41,7 @@ class KMeanClustering:
             for index, point in enumerate(self.normalized_data):
                 norm_array = [[np.linalg.norm(point - cluster, ord=2), i] for i, cluster in enumerate(cluster_location)]
                 nearest_cluster_index = min(norm_array, key=lambda x: x[0])[1]
-                clustered_point_index[nearest_cluster_index].append(index)
+                clustered_point_index[nearest_cluster_index].append([index])
 
             # Update the location of clusters
             for index in range(k):
@@ -52,7 +52,7 @@ class KMeanClustering:
 
                 else:
                     new_location = np.array([random.random() for _ in range(self.data_dimension)])
-                error = np.linalg.norm(new_location - cluster_location[index]) / np.linalg.norm(new_location)
+                error = np.linalg.norm(new_location - cluster_location[index], ord=2)
                 mean_error = average(mean_error, index, error)
                 cluster_location[index] = new_location
 
@@ -101,8 +101,8 @@ class KMeanClustering:
             plt.plot(self.elbow_k, self.inertia_value[self.elbow_k], 'b-o')
 
         plt.figure()
-        for cluster_i, clustered_point_index in enumerate(self.clustered_point_index[k]):
-            points = np.array([self.data[point_i] for point_i in clustered_point_index])
+        for cluster_i, clustered_point in enumerate(self.clustered_point_index[k]):
+            points = np.array([self.data[point_i] for point_i in clustered_point])
             plt.scatter(*np.array(points).T[:2, :],
                         color=(1 / k * cluster_i, 1 - 1 / k * cluster_i, 1 / k * cluster_i),
                         s=10)
@@ -122,53 +122,50 @@ class KMeanClustering:
 
 
 def main():
-    data = np.array([[1, 1],
-                     [1, 20],
-                     [10, 2],
-                     [20, 30],
-                     [30, 30],
-                     [14, 12],
-                     [5, 7],
-                     [1, 8],
-                     [18, 30],
-                     [20, 20],
-                     [25, 25],
-                     [24, 24],
-                     [30, 10],
-                     [10, 2],
-                     [1, 10],
-                     [11, 21],
-                     [11, 30],
-                     [30, 2],
-                     [30, 10],
-                     [30, 20],
-                     [12, 14],
-                     [7, 7],
-                     [2, 8],
-                     [17, 30],
-                     [22, 20],
-                     [15, 25],
-                     [28, 24],
-                     [10, 10],
-                     [20, 2],
-                     [7, 10],
-                     [1, 9],
+    data = np.array([[1, 0],
+                     [1, 1],
+                     [1, 2],
                      [1, 3],
-                     [10, 9],
-                     [20, 19],
-                     [30, 19],
-                     [14, 19],
-                     [11, 28],
-                     [29, 2],
-                     [30, 3],
-                     [29, 11],
-                     [28, 21],
-                     [28, 11],
-                     [18, 3],
-                     [19, 13],
-                     [1, 18],
-                     [4, 1],
-                     [4, 4]])
+                     [1, 4],
+                     [1, 5],
+                     [1, 6],
+                     [1, 7],
+                     [1, 8],
+                     [1, 9],
+                     [1, 10],
+                     [2, 0],
+                     [2, 1],
+                     [2, 2],
+                     [2, 3],
+                     [2, 4],
+                     [2, 5],
+                     [2, 6],
+                     [2, 7],
+                     [2, 8],
+                     [2, 9],
+                     [2, 10],
+                     [11, 10],
+                     [11, 11],
+                     [11, 12],
+                     [11, 13],
+                     [11, 14],
+                     [11, 15],
+                     [11, 16],
+                     [11, 17],
+                     [11, 18],
+                     [11, 19],
+                     [11, 20],
+                     [12, 10],
+                     [12, 11],
+                     [12, 12],
+                     [12, 13],
+                     [12, 14],
+                     [12, 15],
+                     [12, 16],
+                     [12, 17],
+                     [12, 18],
+                     [12, 19],
+                     [12, 20]])
 
     k_mean_clustering = KMeanClustering(data, error_threshold=0.01, k_max=10, repetition=10)
     k_mean_clustering.k_mean_clustering(plot=True)
