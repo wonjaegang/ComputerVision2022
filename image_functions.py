@@ -10,7 +10,7 @@ def get_grayscale(img):
     gray_img = np.zeros((img.shape[0], img.shape[1]))
     for y in range(img.shape[0]):
         for x in range(img.shape[1]):
-            gray_img[y][x] = img[y][x].mean()
+            gray_img[y][x] = 0.299 * img[y][x][0] + 0.587 * img[y][x][1] + 0.114 * img[y][x][2]
     return gray_img
 
 
@@ -50,10 +50,8 @@ def least_squares_approximation(A, B):
         return np.array([[0], [0]])
 
 
-def corner_Harris(img, neighbor_distance, threshold):
+def corner_Harris(grayscale_image, neighbor_distance, threshold):
     corner_location = []
-
-    grayscale_image = get_grayscale(img)
     yx_derivative_image = get_derivative(grayscale_image)
 
     for y in range(grayscale_image.shape[0]):

@@ -12,7 +12,6 @@ class MeanShiftClustering:
         self.error_threshold = error_threshold
         self.window_radius = window_radius
 
-        self.memoization_dict = {}
         self.shifted_mean = np.zeros(data.shape)
         self.clustered_index = []
 
@@ -29,12 +28,6 @@ class MeanShiftClustering:
         for point in self.normalized_data:
             if np.linalg.norm(location - point, ord=2) < self.window_radius:
                 neighbor.append(point)
-        # if neighbor in self.memoization_dict:
-        #     return self.memoization_dict[neighbor]
-        # else:
-        #     self.memoization_dict[neighbor] = np.array([np.mean(vector) for vector in np.array(neighbor).T]).T
-        #     return self.memoization_dict[neighbor]
-
         return np.array([np.mean(vector) for vector in np.array(neighbor).T]).T
 
     def shift_mean(self, point):
@@ -125,9 +118,52 @@ def main():
                      [12, 17],
                      [12, 18],
                      [12, 19],
-                     [12, 20]])
+                     [12, 20],
+                     [20, 0],
+                     [18, 0],
+                     [19, 0],
+                     [20, 1],
+                     [18, 1],
+                     [19, 1],
+                     [20, 2],
+                     [18, 2],
+                     [19, 2],
+                     [18, 4],
+                     [19, 4],
+                     [20, 4],
+                     [18, 5],
+                     [19, 5],
+                     [20, 5],
+                     [18, 6],
+                     [19, 6],
+                     [20, 6],
+                     [18, 7],
+                     [19, 7],
+                     [20, 7],
+                     [20, 10],
+                     [20, 11],
+                     [20, 12],
+                     [20, 13],
+                     [20, 14],
+                     [20, 15],
+                     [20, 16],
+                     [20, 17],
+                     [20, 18],
+                     [20, 19],
+                     [20, 20],
+                     [20, 10],
+                     [20, 11],
+                     [20, 12],
+                     [20, 13],
+                     [20, 14],
+                     [20, 15],
+                     [20, 16],
+                     [20, 17],
+                     [20, 18],
+                     [20, 19],
+                     [20, 20]])
 
-    mean_shift_clustering = MeanShiftClustering(data, error_threshold=0.001, window_radius=0.3)
+    mean_shift_clustering = MeanShiftClustering(data, error_threshold=0.1, window_radius=0.3)
     mean_shift_clustering.mean_shift_clustering()
     mean_shift_clustering.plot_clustered_result()
 

@@ -70,13 +70,13 @@ class OpticalFlow:
 
 def main():
     video_name = 'Paris'
-    frame = 100
+    frame = 200
     # img_name_array = get_image_name_from_video(video_name, frame)
-    img_name_array = ['Paris/200Frame/Paris 180.jpg', 'Paris/200Frame/Paris 181.jpg']
+    img_name_array = ['Paris/100Frame/Paris 090.jpg', 'Paris/100Frame/Paris 091.jpg']
     image_array = get_image_array(img_name_array, downscale=4)
 
     optical_flow = OpticalFlow(image_array,
-                               neighbor_distance=1,
+                               neighbor_distance=2,
                                corner_neighbor_distance=1,
                                corner_threshold=1000)
     optical_flow.calculate_optical_flow()
