@@ -59,6 +59,7 @@ class MeanShiftClustering:
         plt.figure()
         plt.gca().invert_yaxis()
         k = len(self.clustered_index)
+        print(k)
         for cluster_i, indexes in enumerate(self.clustered_index):
             points = np.array([self.data[index] for index in indexes])
             plt.scatter(*points.T[:2, :],
@@ -74,11 +75,9 @@ class MeanShiftClustering:
         while shifted_mean_with_index:
             indexes = []
             for index, mean_vector in shifted_mean_with_index:
-                print(index, np.linalg.norm(mean_vector - shifted_mean_with_index[-1][1], ord=2))
                 if np.linalg.norm(mean_vector - shifted_mean_with_index[-1][1], ord=2) < self.error_threshold:
                     indexes.append(index)
             shifted_mean_with_index = [x for x in shifted_mean_with_index if x[0] not in indexes]
-            print(indexes)
             self.clustered_index.append(indexes)
 
 
